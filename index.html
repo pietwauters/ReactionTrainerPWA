@@ -67,8 +67,21 @@
         <button id="btnLevel">Level 1</button>
       </div>
       <button id="btnStart" class="start">Start</button>
+      <button id="btnShare" class="link">Share this app</button>
     </section>
   </main>
+
+  <dialog id="shareDialog" aria-labelledby="shareTitle">
+    <h2 id="shareTitle">Share Reaction Trainer</h2>
+    <p class="note">Scan with a phone camera to open the app.</p>
+    <img src="icons/share-qr.svg" alt="QR code for the Reaction Trainer web address" class="qr" width="240" height="240">
+    <p id="shareUrl" class="share-url"></p>
+    <div class="dialog-actions">
+      <button id="btnShareLink" hidden>Share link…</button>
+      <button id="btnCopyLink">Copy link</button>
+      <button id="btnShareClose" class="secondary">Close</button>
+    </div>
+  </dialog>
 
   <div id="installHint" class="install-hint" hidden>
     <span>Install: tap <strong>Share</strong> then <strong>Add to Home Screen</strong>.</span>

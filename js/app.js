@@ -166,6 +166,33 @@ if (isIOS && !standalone && !settings.hintDismissed) {
   });
 }
 
+// ---------- share ----------
+const APP_URL = 'https://pietwauters.github.io/ReactionTrainerPWA/'; // the QR code in icons/share-qr.svg encodes this
+const shareData = { title: 'Reaction Trainer', text: 'Reaction trainer with metronome', url: APP_URL };
+$('shareUrl').textContent = APP_URL;
+if (navigator.share && (!navigator.canShare || navigator.canShare(shareData))) $('btnShareLink').hidden = false;
+
+$('btnShare').addEventListener('click', () => $('shareDialog').showModal());
+$('btnShareClose').addEventListener('click', () => $('shareDialog').close());
+$('shareDialog').addEventListener('click', (e) => { // tap outside the dialog closes it
+  const r = e.currentTarget.getBoundingClientRect();
+  const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+  if (!inside) e.currentTarget.close();
+});
+$('btnShareLink').addEventListener('click', () => {
+  navigator.share(shareData).catch(() => { /* cancelled */ });
+});
+$('btnCopyLink').addEventListener('click', async () => {
+  const btn = $('btnCopyLink');
+  try {
+    await navigator.clipboard.writeText(APP_URL);
+    btn.textContent = 'Copied!';
+  } catch {
+    btn.textContent = 'Copy failed';
+  }
+  setTimeout(() => { btn.textContent = 'Copy link'; }, 1500);
+});
+
 // ---------- offline support ----------
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

@@ -1,6 +1,6 @@
 // Service worker: caches the whole app so it works offline.
 // Bump VERSION whenever any file changes, so phones pick up the new version.
-const VERSION = 'v5';
+const VERSION = 'v6';
 const CACHE = `reactiontrainer-${VERSION}`;
 
 const FILES = [
@@ -26,6 +26,7 @@ const FILES = [
   'icons/maskable-512.png',
   'icons/apple-touch-icon.png',
   'icons/favicon-32.png',
+  'icons/share-qr.svg',
 ];
 
 self.addEventListener('install', (event) => {
