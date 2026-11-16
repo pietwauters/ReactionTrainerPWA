@@ -5,14 +5,25 @@
 // future background-music player can be added without touching the rest):
 //
 //   signals   ─┐
-//   metronome ─┼─> master ─> destination
-//   music     ─┘   (music bus is reserved for a future background-music player)
+//   metronome ─┤
+//   music     ─┼─> master ─> destination
+//   keepAlive ─┘
+//
+// music:     reserved for a future background-music player
+// keepAlive: very quiet noise that stops Bluetooth speakers/headsets from
+//            going to sleep during the silent gaps between signals
 
 const SAMPLE_FILES = {
   tickMain: 'sounds/tick-main.wav',
   tickSub: 'sounds/tick-sub.wav',
   ring: 'sounds/ring.wav',
 };
+
+// About -50 dBFS. Brown noise is mostly low frequency, which phone and small
+// Bluetooth speakers barely reproduce, so it is close to inaudible while the
+// stream is never digital silence (what makes Bluetooth devices power down).
+const KEEPALIVE_GAIN = 0.003;
+const KEEPALIVE_FADE_S = 0.3;
 
 
 export class AudioEngine {
@@ -23,6 +34,7 @@ export class AudioEngine {
     this.groups = new Map(); // group name -> Set of active sources
     this.loading = null;
     this.mixWithOthers = false;
+    this.keepAliveSrc = null;
   }
 
   get now() {
@@ -91,7 +103,62 @@ export class AudioEngine {
       signals: mk(1.0),
       metronome: mk(1.0),
       music: mk(0.6), // reserved for background music
+      keepAlive: mk(0),
     };
+  }
+
+  /** Start or stop the Bluetooth keep-alive noise (with a short fade). */
+  setKeepAlive(on) {
+    if (!this.ctx || !this.buffers.noise) return;
+    const g = this.buses.keepAlive.gain;
+    const t = this.ctx.currentTime;
+    g.cancelScheduledValues(t);
+    g.setValueAtTime(g.value, t);
+    if (on) {
+      if (!this.keepAliveSrc) {
+        const src = this.ctx.createBufferSource();
+        src.buffer = this.buffers.noise;
+        src.loop = true;
+        src.loopStart = this.noiseLoopStart; // see #brownNoise
+        src.loopEnd = this.buffers.noise.duration;
+        src.connect(this.buses.keepAlive);
+        src.start(t);
+        this.keepAliveSrc = src;
+      }
+      g.linearRampToValueAtTime(KEEPALIVE_GAIN, t + KEEPALIVE_FADE_S);
+    } else if (this.keepAliveSrc) {
+      g.linearRampToValueAtTime(0, t + KEEPALIVE_FADE_S);
+      this.keepAliveSrc.stop(t + KEEPALIVE_FADE_S);
+      this.keepAliveSrc = null;
+    }
+  }
+
+  /**
+   * 4 s of brown noise, normalised to ±1. The last 50 ms are crossfaded into
+   * the first 50 ms, so the end continues smoothly into sample `xf`; the loop
+   * therefore restarts at xf (noiseLoopStart), not at 0.
+   */
+  #brownNoise() {
+    const sr = this.ctx.sampleRate;
+    const n = 4 * sr;
+    const buf = this.ctx.createBuffer(1, n, sr);
+    const d = buf.getChannelData(0);
+    let last = 0;
+    let peak = 0;
+    for (let i = 0; i < n; i++) {
+      last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; // leaky integrator
+      d[i] = last;
+      peak = Math.max(peak, Math.abs(last));
+    }
+    // Crossfade the last 50 ms into the start so the loop point doesn't click.
+    const xf = Math.round(0.05 * sr);
+    for (let i = 0; i < xf; i++) {
+      const a = i / xf;
+      d[n - xf + i] = d[n - xf + i] * (1 - a) + d[i] * a;
+    }
+    for (let i = 0; i < n; i++) d[i] /= peak;
+    this.noiseLoopStart = xf / sr;
+    return buf;
   }
 
   async #loadAll() {
@@ -99,6 +166,7 @@ export class AudioEngine {
     this.buffers.high = this.#androidTone(8800, false);
     this.buffers.low = this.#androidTone(1760, false);
     this.buffers.distract = this.#androidTone(7040, true);
+    this.buffers.noise = this.#brownNoise();
 
     await Promise.all(
       Object.entries(SAMPLE_FILES).map(async ([name, url]) => {

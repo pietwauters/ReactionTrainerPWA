@@ -14,8 +14,12 @@ const $ = (id) => document.getElementById(id);
 const STORE_KEY = 'reactiontrainer.settings.v1';
 const defaults = {
   program: 1, level: 1, base: 20, noteValue: 4, beatsPerBar: 2,
-  changeTempo: false, sync: false, mix: false, hintDismissed: false,
+  changeTempo: false, sync: false, mix: false, btKeepAlive: false, hintDismissed: false,
 };
+
+// Set to true by a future background-music player; while music plays it keeps
+// Bluetooth devices awake by itself, so the keep-alive noise is not needed.
+let musicPlaying = false;
 let settings = { ...defaults };
 try { Object.assign(settings, JSON.parse(localStorage.getItem(STORE_KEY) || '{}')); } catch { /* ignore */ }
 function save() {
@@ -64,11 +68,18 @@ function render() {
   $('swChange').checked = settings.changeTempo;
   $('swSync').checked = settings.sync;
   $('swMix').checked = settings.mix;
+  $('swKeepAlive').checked = settings.btKeepAlive;
+}
+
+/** Keep-alive noise: only during an exercise, and only when no music is playing. */
+function refreshKeepAlive() {
+  audio.setKeepAlive(settings.btKeepAlive && session.active && !musicPlaying);
 }
 
 function refreshRunning() {
   scheduler.update();
   setWakeLock(session.active || metronome.active);
+  refreshKeepAlive();
   render();
 }
 
@@ -120,6 +131,11 @@ $('swMix').addEventListener('change', (e) => {
   settings.mix = e.target.checked;
   audio.setMixWithOthers(settings.mix);
   save();
+});
+$('swKeepAlive').addEventListener('change', (e) => {
+  settings.btKeepAlive = e.target.checked;
+  save();
+  refreshKeepAlive();
 });
 
 // ---------- iOS "Add to Home Screen" hint ----------
