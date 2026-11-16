@@ -1,6 +1,6 @@
 // Service worker: caches the whole app so it works offline.
 // Bump VERSION whenever any file changes, so phones pick up the new version.
-const VERSION = 'v3';
+const VERSION = 'v4';
 const CACHE = `reactiontrainer-${VERSION}`;
 
 const FILES = [
@@ -10,6 +10,7 @@ const FILES = [
   'manifest.webmanifest',
   'js/app.js',
   'js/audio.js',
+  'js/ducker.js',
   'js/exercises.js',
   'js/metronome.js',
   'js/scheduler.js',
@@ -19,6 +20,7 @@ const FILES = [
   'sounds/tick-main.wav',
   'sounds/tick-sub.wav',
   'sounds/ring.wav',
+  'sounds/duck-hold.wav',
   'icons/icon-192.png',
   'icons/icon-512.png',
   'icons/maskable-512.png',

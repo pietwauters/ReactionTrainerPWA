@@ -6,6 +6,7 @@ import { Metronome } from './metronome.js';
 import { Session } from './session.js';
 import { Visuals } from './visuals.js';
 import { setWakeLock } from './wakelock.js';
+import { Ducker } from './ducker.js';
 import { PROGRAMS, LEVELS, buildExercise } from './exercises.js';
 
 const $ = (id) => document.getElementById(id);
@@ -14,7 +15,7 @@ const $ = (id) => document.getElementById(id);
 const STORE_KEY = 'reactiontrainer.settings.v1';
 const defaults = {
   program: 1, level: 1, base: 20, noteValue: 4, beatsPerBar: 2,
-  changeTempo: false, sync: false, mix: false, btKeepAlive: false, hintDismissed: false,
+  changeTempo: false, sync: false, mix: false, btKeepAlive: false, duck: false, hintDismissed: false,
 };
 
 // Set to true by a future background-music player; while music plays it keeps
@@ -32,6 +33,7 @@ audio.mixWithOthers = settings.mix;
 const scheduler = new Scheduler(audio);
 const metronome = new Metronome(audio);
 const visuals = new Visuals(audio, document.body);
+const ducker = new Ducker(audio);
 const session = new Session(audio, visuals, metronome, () => ({
   changeTempo: settings.changeTempo,
   sync: settings.sync,
@@ -69,6 +71,7 @@ function render() {
   $('swSync').checked = settings.sync;
   $('swMix').checked = settings.mix;
   $('swKeepAlive').checked = settings.btKeepAlive;
+  $('swDuck').checked = settings.duck;
 }
 
 /** Keep-alive noise: only during an exercise, and only when no music is playing. */
@@ -90,7 +93,8 @@ metronome.onChange = () => {
   save();
   render();
 };
-session.onEnd = refreshRunning;
+session.onEnd = () => { ducker.cancel(); refreshRunning(); };
+session.onSound = (t) => { if (settings.duck && !musicPlaying) ducker.at(t); };
 
 // ---------- controls ----------
 $('btnStart').addEventListener('click', async () => {
@@ -136,6 +140,11 @@ $('swKeepAlive').addEventListener('change', (e) => {
   settings.btKeepAlive = e.target.checked;
   save();
   refreshKeepAlive();
+});
+$('swDuck').addEventListener('change', (e) => {
+  settings.duck = e.target.checked;
+  save();
+  if (!settings.duck) ducker.cancel();
 });
 
 // ---------- iOS "Add to Home Screen" hint ----------

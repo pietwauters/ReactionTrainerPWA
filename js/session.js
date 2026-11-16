@@ -26,6 +26,7 @@ export class Session {
     this.active = false;
     this.phase = 'idle';
     this.onEnd = null;
+    this.onSound = null; // (audioTime) => void, for each signal tone
   }
 
   start(exercise) {
@@ -133,6 +134,7 @@ export class Session {
 
   #sound(name, color, t) {
     this.audio.play(name, t, 'signals', 'session');
+    if (this.onSound) this.onSound(t);
     this.visuals.at(t, color);
   }
 }
