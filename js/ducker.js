@@ -1,65 +1,39 @@
-// EXPERIMENTAL: ask the phone to lower music from other apps (Spotify, ...)
-// while a signal plays. A web page cannot set another app's volume; this
-// relies on platform behaviour that differs per browser:
+// Keep music from other apps (Spotify, ...) turned down while the app runs.
 //
-// Android (Chrome): an <audio> element with a clip shorter than ~5 s is
-//   treated as a short sound and Chrome requests "transient, may duck" audio
-//   focus. Android then lowers other apps until the clip ends. The clip is
-//   silent; the signal itself still plays through Web Audio for exact timing.
+// A web page cannot set another app's volume, but on Android Chrome treats an
+// <audio> element with a clip shorter than ~5 s as a short sound and requests
+// "transient, may duck" audio focus. Android then lowers other apps for as
+// long as that element keeps playing. So we play a silent 1.5 s clip and
+// rewind it every second, so it never ends and the focus is never released.
+// Pausing it gives the music its normal volume back.
 //
-// iOS (Safari 16.4+): switch navigator.audioSession to 'transient', which is
-//   meant to duck other audio, and restore the normal type afterwards.
-//
-// The lowering starts when the signal is heard, never before, so a music dip
-// cannot warn the athlete that a signal is coming.
+// Android only: on iOS an <audio> element would pause other apps instead of
+// lowering them, and iOS has no web API to duck other audio.
 
-const HOLD_MS = 1500; // also the length of sounds/duck-hold.wav
+const REWIND_MS = 1000; // must be shorter than sounds/duck-hold.wav (1.5 s)
 
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+export const duckingSupported = !(/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
 
 export class Ducker {
-  constructor(audio) {
-    this.audio = audio;
-    this.timers = new Set();
-    this.restoreTimer = 0;
+  constructor() {
     this.el = null;
+    this.timer = 0;
   }
 
-  /** Lower other apps' music when the sound scheduled at audio time `time` is heard. */
-  at(time) {
-    const delay = Math.max(0, (time + this.audio.outputLatency - this.audio.now) * 1000);
-    const id = setTimeout(() => { this.timers.delete(id); this.#duck(); }, delay);
-    this.timers.add(id);
-  }
-
-  /** Cancel pending ducks and give the music its volume back. */
-  cancel() {
-    for (const id of this.timers) clearTimeout(id);
-    this.timers.clear();
-    this.#restore();
-  }
-
-  #duck() {
-    if (isIOS && navigator.audioSession) {
-      try { navigator.audioSession.type = 'transient'; } catch { /* unsupported */ }
-      clearTimeout(this.restoreTimer);
-      this.restoreTimer = setTimeout(() => this.#restore(), HOLD_MS);
-    } else {
+  set(on) {
+    if (!duckingSupported) return;
+    if (on && !this.timer) {
       if (!this.el) {
         this.el = new Audio('sounds/duck-hold.wav');
         this.el.preload = 'auto';
       }
-      this.el.currentTime = 0; // restarting keeps the focus during back-to-back signals
+      this.el.currentTime = 0;
       this.el.play().catch(() => { /* not allowed or unsupported */ });
-    }
-  }
-
-  #restore() {
-    clearTimeout(this.restoreTimer);
-    if (isIOS) {
-      this.audio.setMixWithOthers(this.audio.mixWithOthers); // back to 'ambient'/'playback'
-    } else if (this.el) {
+      this.timer = setInterval(() => { this.el.currentTime = 0; }, REWIND_MS);
+    } else if (!on && this.timer) {
+      clearInterval(this.timer);
+      this.timer = 0;
       this.el.pause();
     }
   }

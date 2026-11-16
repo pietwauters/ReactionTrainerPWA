@@ -42,7 +42,7 @@ python3 -m http.server 8000   # then open http://localhost:8000
 | `js/session.js` | a training session |
 | `js/visuals.js` | colour flashes in sync with the audio |
 | `js/wakelock.js` | keep the screen on while running |
-| `js/ducker.js` | experimental: lower other apps' music on signals |
+| `js/ducker.js` | Android: turn other apps' music down while training |
 | `sw.js` | offline cache — **bump `VERSION` on every change** |
 
 ## Deploy

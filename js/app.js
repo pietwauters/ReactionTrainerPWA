@@ -6,7 +6,7 @@ import { Metronome } from './metronome.js';
 import { Session } from './session.js';
 import { Visuals } from './visuals.js';
 import { setWakeLock } from './wakelock.js';
-import { Ducker } from './ducker.js';
+import { Ducker, duckingSupported } from './ducker.js';
 import { PROGRAMS, LEVELS, buildExercise } from './exercises.js';
 
 const $ = (id) => document.getElementById(id);
@@ -33,7 +33,7 @@ audio.mixWithOthers = settings.mix;
 const scheduler = new Scheduler(audio);
 const metronome = new Metronome(audio);
 const visuals = new Visuals(audio, document.body);
-const ducker = new Ducker(audio);
+const ducker = new Ducker();
 const session = new Session(audio, visuals, metronome, () => ({
   changeTempo: settings.changeTempo,
   sync: settings.sync,
@@ -79,10 +79,16 @@ function refreshKeepAlive() {
   audio.setKeepAlive(settings.btKeepAlive && session.active && !musicPlaying);
 }
 
+/** Other apps' music turned down while an exercise or the metronome runs (Android). */
+function refreshDucking() {
+  ducker.set(settings.duck && (session.active || metronome.active) && !musicPlaying);
+}
+
 function refreshRunning() {
   scheduler.update();
   setWakeLock(session.active || metronome.active);
   refreshKeepAlive();
+  refreshDucking();
   render();
 }
 
@@ -93,8 +99,7 @@ metronome.onChange = () => {
   save();
   render();
 };
-session.onEnd = () => { ducker.cancel(); refreshRunning(); };
-session.onSound = (t) => { if (settings.duck && !musicPlaying) ducker.at(t); };
+session.onEnd = refreshRunning;
 
 // ---------- controls ----------
 $('btnStart').addEventListener('click', async () => {
@@ -144,8 +149,9 @@ $('swKeepAlive').addEventListener('change', (e) => {
 $('swDuck').addEventListener('change', (e) => {
   settings.duck = e.target.checked;
   save();
-  if (!settings.duck) ducker.cancel();
+  refreshDucking();
 });
+if (!duckingSupported) $('duckSetting').hidden = true;
 
 // ---------- iOS "Add to Home Screen" hint ----------
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
