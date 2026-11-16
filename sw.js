@@ -1,6 +1,6 @@
 // Service worker: caches the whole app so it works offline.
 // Bump VERSION whenever any file changes, so phones pick up the new version.
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = `reactiontrainer-${VERSION}`;
 
 const FILES = [

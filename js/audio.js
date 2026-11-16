@@ -14,7 +14,6 @@ const SAMPLE_FILES = {
   ring: 'sounds/ring.wav',
 };
 
-const FADE_S = 0.003; // short fade to avoid clicks at tone edges
 
 export class AudioEngine {
   constructor() {
@@ -96,11 +95,10 @@ export class AudioEngine {
   }
 
   async #loadAll() {
-    const sr = this.ctx.sampleRate;
-    // Synthesized tones, same frequencies and lengths as the Android app.
-    this.buffers.high = this.#tone(8800, [[0, 300]], 300, sr);
-    this.buffers.low = this.#tone(1760, [[0, 300]], 300, sr);
-    this.buffers.distract = this.#tone(7040, [[0, 100], [150, 300]], 300, sr);
+    // Signal tones: bit-exact copies of what the Android app generated.
+    this.buffers.high = this.#androidTone(8800, false);
+    this.buffers.low = this.#androidTone(1760, false);
+    this.buffers.distract = this.#androidTone(7040, true);
 
     await Promise.all(
       Object.entries(SAMPLE_FILES).map(async ([name, url]) => {
@@ -112,19 +110,25 @@ export class AudioEngine {
     );
   }
 
-  /** Sine tone, played only within the given [startMs, endMs] segments. */
-  #tone(freq, segments, totalMs, sr) {
-    const len = Math.round((totalMs / 1000) * sr);
-    const buf = this.ctx.createBuffer(1, len, sr);
+  /**
+   * Reproduces genTone/genDistract from the Android MainActivity exactly,
+   * including its byte-packing quirk: the high byte was written as
+   * `val and (0xff00 ushr 8)` == `val and 0xff`, i.e. a copy of the low byte.
+   * That turns the sine into a buzzy, harmonic-rich tone, which is the sound
+   * users are trained on. 300 ms at 32 kHz, played back at 32 kHz.
+   */
+  #androidTone(freq, distract) {
+    const SR = 32000;
+    const n = (300 * SR) / 1000;
+    const end1 = (100 * SR) / 1000;
+    const end2 = end1 + (50 * SR) / 1000;
+    const buf = this.ctx.createBuffer(1, n, SR); // the context resamples to its own rate
     const d = buf.getChannelData(0);
-    const fade = Math.round(FADE_S * sr);
-    for (const [a, b] of segments) {
-      const s0 = Math.round((a / 1000) * sr);
-      const s1 = Math.min(len, Math.round((b / 1000) * sr));
-      for (let i = s0; i < s1; i++) {
-        const env = Math.min(1, (i - s0) / fade, (s1 - 1 - i) / fade);
-        d[i] = Math.sin((2 * Math.PI * i * freq) / sr) * env;
-      }
+    for (let i = 0; i < n; i++) {
+      const s = distract && i >= end1 && i < end2 ? 0 : Math.sin((2 * Math.PI * i) / (SR / freq));
+      const lo = Math.trunc(s * 32767) & 0xff;           // (val and 0x00ff)
+      const word = (lo << 8) | lo;                        // high byte = low byte
+      d[i] = (word >= 0x8000 ? word - 0x10000 : word) / 32768; // little-endian signed 16-bit
     }
     return buf;
   }
