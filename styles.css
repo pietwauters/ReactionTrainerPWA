@@ -1,0 +1,137 @@
+:root {
+  color-scheme: light;
+  --primary: #17375e;
+  --primary-ink: #ffffff;
+  --ink: #1b1f24;
+  --muted: #5b6470;
+  --surface: #ffffff;
+  --line: #d5dbe3;
+  --stop: #b3261e;
+  --flash: transparent;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; margin: 0; }
+
+body {
+  background: var(--surface);
+  color: var(--ink);
+  font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  overscroll-behavior: none;
+}
+
+/* The whole screen takes the signal colour. No transition: it must be instant. */
+body.flashing { background: var(--flash); }
+
+main {
+  min-height: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding:
+    calc(16px + env(safe-area-inset-top)) 16px
+    calc(24px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+button {
+  font: inherit;
+  font-weight: 600;
+  border: 0;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-ink);
+  min-height: 48px;
+  padding: 0 20px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+button:active { filter: brightness(1.25); }
+button:disabled { opacity: 0.45; }
+button.running { background: var(--stop); }
+button.wide { width: 100%; }
+
+/* ---- metronome ---- */
+.metronome { display: flex; flex-direction: column; gap: 16px; padding-top: 8px; }
+
+.metro-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.timesig { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.timesig button { min-width: 56px; min-height: 44px; font-size: 1.25rem; border-radius: 12px; }
+.timesig .bar { width: 40px; height: 2px; background: var(--ink); }
+
+.tempo { display: flex; align-items: center; gap: 12px; }
+.round { width: 52px; height: 52px; padding: 0; font-size: 1.6rem; }
+.tempo-value { display: flex; flex-direction: column; align-items: center; min-width: 88px; }
+.tempo-value output { font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.tempo-value .unit { font-size: 0.8rem; color: var(--muted); }
+.tempo-value .now { font-size: 0.8rem; color: var(--muted); min-height: 1.2em; font-variant-numeric: tabular-nums; }
+
+/* ---- exercise ---- */
+.exercise { margin-top: auto; text-align: center; }
+.exercise p { margin: 4px 0; }
+.summary { color: var(--muted); }
+.description { font-weight: 700; font-size: 1.1rem; white-space: pre-line; min-height: 3em; }
+
+/* ---- options ---- */
+.options { display: flex; flex-direction: column; gap: 10px; }
+.switch { display: flex; align-items: center; gap: 12px; min-height: 40px; cursor: pointer; }
+.switch input {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  width: 48px; height: 28px;
+  border-radius: 999px;
+  background: var(--line);
+  position: relative;
+  margin: 0;
+  cursor: pointer;
+}
+.switch input::after {
+  content: "";
+  position: absolute; top: 3px; left: 3px;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,.3);
+  transition: transform .15s;
+}
+.switch input:checked { background: var(--primary); }
+.switch input:checked::after { transform: translateX(20px); }
+.switch input:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+details summary { color: var(--muted); cursor: pointer; min-height: 32px; }
+details .switch { margin-top: 4px; }
+.note { margin: 4px 0 0; font-size: 0.85rem; color: var(--muted); }
+
+/* ---- bottom controls ---- */
+.controls { display: flex; flex-direction: column; gap: 16px; }
+.controls .row { display: flex; gap: 12px; }
+.controls .row button { flex: 1; }
+.start { min-height: 64px; font-size: 1.3rem; }
+
+/* ---- install hint ---- */
+.install-hint {
+  position: fixed;
+  left: 12px; right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  max-width: 456px;
+  margin: 0 auto;
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 12px 12px 16px;
+  border-radius: 14px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 0.9rem;
+}
+.install-hint[hidden] { display: none; }
+.install-hint button { background: transparent; min-height: 36px; padding: 0 8px; font-size: 1.3rem; }
