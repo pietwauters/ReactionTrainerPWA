@@ -1,10 +1,11 @@
 // A training session: start ring, the shuffled signals, end ring.
 // Timing reproduces the Android thread loop:
-//   ring, 1.4 s, then per signal: wait (random gap - 0.5 s), signal,
-//   colour held 0.8 s after the (last) tone; after the last signal one more
-//   random gap, the end ring and 1.4 s.
+//   ring, 1.4 s, then per signal: random pause after the (last) tone ends,
+//   signal, colour held 0.5 s after the (last) tone; after the last signal one
+//   more random pause, the end ring and 1.4 s.
+// The ranges come from the exercise's resolved timing (see exercises.js).
 
-import { SIGNAL, TONE_MS, CHOICE_MS, AFTER_MS, randInt } from './exercises.js';
+import { SIGNAL, TONE_MS, AFTER_MS, randInt } from './exercises.js';
 
 export const COLOR = { HIGH: '#00ff00', LOW: '#ff0000', NONE: '' };
 
@@ -52,8 +53,14 @@ export class Session {
     if (this.onEnd) this.onEnd();
   }
 
+  /** Random value (ms) from one of the exercise's timing ranges. */
+  #rand(name) {
+    const r = this.ex.timing[name];
+    return randInt(r.min, r.max);
+  }
+
   #gap() {
-    return randInt(this.ex.avg - this.ex.sigma, this.ex.avg + this.ex.sigma);
+    return this.#rand('pause');
   }
 
   /** Called by the metronome for each point halfway after a sub tick. */
@@ -111,16 +118,12 @@ export class Session {
         this.#sound('distract', COLOR.NONE, t);
         break;
       case SIGNAL.CHANGE:
-        this.#sound('high', COLOR.HIGH, t);
-        last = t + (TONE_MS + CHOICE_MS) / 1000;
-        at(last, changeTempo);
-        this.#sound('low', COLOR.LOW, last);
-        break;
       case SIGNAL.ANTICIPATION: {
         this.#sound('high', COLOR.HIGH, t);
-        this.visuals.at(t + HOLD_S, COLOR.NONE);
-        const wait = randInt(3200 - this.ex.sigma, 3500 + this.ex.sigma);
-        last = t + HOLD_S + (wait - 500) / 1000;
+        const delay = this.#rand(type === SIGNAL.CHANGE ? 'change' : 'anticipation');
+        last = t + (TONE_MS + delay) / 1000;
+        // green goes off after its normal hold unless red already replaces it
+        if (last > t + HOLD_S) this.visuals.at(t + HOLD_S, COLOR.NONE);
         at(last, changeTempo);
         this.#sound('low', COLOR.LOW, last);
         break;

@@ -7,7 +7,7 @@ import { Session } from './session.js';
 import { Visuals } from './visuals.js';
 import { setWakeLock } from './wakelock.js';
 import { Ducker, duckingSupported } from './ducker.js';
-import { PROGRAMS, LEVELS, buildExercise } from './exercises.js';
+import { PRESETS, LEVELS, buildExercise } from './exercises.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -45,13 +45,15 @@ metronome.onSubTickMidpoint = (t) => session.syncPoint(t);
 scheduler.add(metronome); // metronome first so sync points exist before the session looks
 scheduler.add(session);
 
-let exercise = buildExercise(settings.program, settings.level);
+const currentDef = () => PRESETS[settings.program - 1] ?? PRESETS[0];
+const build = () => buildExercise(currentDef(), settings.level);
+let exercise = build();
 
 // ---------- rendering ----------
 function render() {
   $('btnProgram').textContent = `Program ${settings.program}`;
   $('btnLevel').textContent = `Level ${settings.level}`;
-  $('description').textContent = PROGRAMS[settings.program - 1];
+  $('description').textContent = currentDef().name;
   $('summary').textContent = `${exercise.count} signals; ${exercise.totalSeconds} seconds`;
 
   $('btnStart').textContent = session.active ? 'Stop' : 'Start';
@@ -105,7 +107,8 @@ session.onEnd = refreshRunning;
 $('btnStart').addEventListener('click', async () => {
   if (session.active) { session.stop(); return; }
   await audio.unlock();
-  exercise = buildExercise(settings.program, settings.level); // fresh shuffle each run
+  if (session.active) return; // a second tap while the audio was unlocking
+  exercise = build(); // fresh shuffle each run
   session.start(exercise);
   refreshRunning();
 });
@@ -113,19 +116,20 @@ $('btnStart').addEventListener('click', async () => {
 $('btnMetronome').addEventListener('click', async () => {
   if (metronome.active) { metronome.stop(); refreshRunning(); return; }
   await audio.unlock();
+  if (metronome.active) return; // a second tap while the audio was unlocking
   metronome.start();
   refreshRunning();
 });
 
 $('btnProgram').addEventListener('click', () => {
-  settings.program = settings.program % PROGRAMS.length + 1;
-  exercise = buildExercise(settings.program, settings.level);
+  settings.program = settings.program % PRESETS.length + 1;
+  exercise = build();
   save(); render();
 });
 
 $('btnLevel').addEventListener('click', () => {
   settings.level = settings.level % LEVELS.length + 1;
-  exercise = buildExercise(settings.program, settings.level);
+  exercise = build();
   save(); render();
 });
 

@@ -1,6 +1,23 @@
-// Programs, levels and exercise-list generation.
-// Direct port of generate_exercise_list / generate_base_exercise / set_Level_vars
-// from the Android MainActivity.kt, keeping its integer arithmetic.
+// Exercise definitions, levels and exercise-list generation.
+//
+// An exercise *definition* is a plain JSON object (stored, shared and backed
+// up as is). The 8 programs of the Android app are built-in presets in the
+// same format; they reproduce the Android logic exactly, including its
+// integer arithmetic.
+//
+// Definition (format version 1), all times in ms:
+//   {
+//     v: 1, id, name,
+//     builtIn?: true,
+//     mix: { high, low, distract, change, anticipation },  // percentages
+//     count: null | n,                    // null: follow the level
+//     pause: null | { min, max },         // between signals; null: follow the level
+//     change: { min, max },               // end of high tone -> start of low tone
+//     anticipation: null | { min, max },  // same; null: follow the level
+//     legacyRemainder?: type,             // presets only: Android rounding of the mix
+//   }
+// A pause is the silence between the end of a signal's (last) tone and the
+// start of the next signal.
 
 export const SIGNAL = Object.freeze({
   HIGH: 0,          // high tone, green
@@ -10,20 +27,13 @@ export const SIGNAL = Object.freeze({
   ANTICIPATION: 4,  // high, then low after a few seconds
 });
 
-export const TONE_MS = 300;    // duration of each signal tone
-export const CHOICE_MS = 250;  // gap between high and low in a change reaction
-export const AFTER_MS = 500;   // colour stays this long after a tone ends
+/** Signal type keys, indexed by SIGNAL value. */
+export const TYPES = Object.freeze(['high', 'low', 'distract', 'change', 'anticipation']);
 
-export const PROGRAMS = [
-  'Only High tones',
-  'High tones with distract',
-  'Both High and Low tones',
-  'Both High and Low tones with distract',
-  'Change reaction (High followed by low)',
-  'Change reaction (High followed by low)\nwith distract',
-  'High followed by low after some time',
-  'High followed by low after some time\nwith distract',
-];
+export const FORMAT_VERSION = 1;
+
+export const TONE_MS = 300;    // duration of each signal tone
+export const AFTER_MS = 500;   // colour stays this long after a tone ends
 
 export const LEVELS = [
   { avg: 5700, sigma: 2500, n: 10 },
@@ -34,21 +44,111 @@ export const LEVELS = [
   { avg: 3050, sigma: 1000, n: 36 },
 ];
 
-const idiv = (a, b) => Math.trunc(a / b);
+// Anticipation wait when following the level: randInt(BASE_MIN - sigma, BASE_MAX + sigma).
+const ANTICIPATION_BASE_MIN = 3200;
+const ANTICIPATION_BASE_MAX = 3500;
+const CHANGE_DEFAULT = { min: 250, max: 250 };
 
-// Counts per signal type for a program: [high, low, distract, change, anticipation]
-function programCounts(program, n) {
-  switch (program) {
-    case 1: return [n, 0, 0, 0, 0];
-    case 2: return [idiv(n * 8, 10), 0, n - idiv(n * 8, 10), 0, 0];
-    case 3: return [idiv(n, 2), n - idiv(n, 2), 0, 0, 0];
-    case 4: return [idiv(n * 4, 10), idiv(n * 4, 10), n - idiv(n * 8, 10), 0, 0];
-    case 5: return [idiv(n, 2), 0, 0, n - idiv(n, 2), 0];
-    case 6: return [idiv(n * 4, 10), 0, n - idiv(n * 8, 10), idiv(n * 4, 10), 0];
-    case 7: return [0, 0, 0, 0, n];
-    case 8: return [0, 0, n - idiv(n * 8, 10), 0, idiv(n * 8, 10)];
-    default: return [n, 0, 0, 0, 0];
+const idiv = (a, b) => Math.trunc(a / b);
+const mix = (high, low, distract, change, anticipation) => ({ high, low, distract, change, anticipation });
+
+function preset(n, name, m, legacyRemainder) {
+  return {
+    v: FORMAT_VERSION, id: `preset-${n}`, name, builtIn: true,
+    mix: m, count: null, pause: null, change: { ...CHANGE_DEFAULT }, anticipation: null,
+    legacyRemainder,
+  };
+}
+
+export const PRESETS = Object.freeze([
+  preset(1, 'Only High tones', mix(100, 0, 0, 0, 0), 'high'),
+  preset(2, 'High tones with distract', mix(80, 0, 20, 0, 0), 'distract'),
+  preset(3, 'Both High and Low tones', mix(50, 50, 0, 0, 0), 'low'),
+  preset(4, 'Both High and Low tones with distract', mix(40, 40, 20, 0, 0), 'distract'),
+  preset(5, 'Change reaction (High followed by low)', mix(50, 0, 0, 50, 0), 'change'),
+  preset(6, 'Change reaction (High followed by low)\nwith distract', mix(40, 0, 20, 40, 0), 'distract'),
+  preset(7, 'High followed by low after some time', mix(0, 0, 0, 0, 100), 'anticipation'),
+  preset(8, 'High followed by low after some time\nwith distract', mix(0, 0, 20, 0, 80), 'distract'),
+].map(Object.freeze));
+
+// ---------- definition validation ----------
+
+const clampInt = (x, lo, hi, dflt) => {
+  const v = Math.round(Number(x));
+  return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : dflt;
+};
+
+function range(r, lo, hi, dflt) {
+  if (r == null) return dflt;
+  const a = clampInt(r.min, lo, hi, null);
+  const b = clampInt(r.max, lo, hi, null);
+  if (a == null || b == null) return dflt;
+  return { min: Math.min(a, b), max: Math.max(a, b) };
+}
+
+/**
+ * Turn untrusted input (a shared link, a backup file) into a valid definition.
+ * Missing or invalid fields get defaults. Returns null if nothing usable is left.
+ */
+export function normalizeDef(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const m = {};
+  for (const t of TYPES) m[t] = clampInt(raw.mix?.[t], 0, 100, 0);
+  if (TYPES.every((t) => m[t] === 0)) return null;
+  const def = {
+    v: FORMAT_VERSION,
+    id: typeof raw.id === 'string' && raw.id ? raw.id.slice(0, 64) : newId(),
+    name: (typeof raw.name === 'string' && raw.name.trim() ? raw.name : 'My exercise').slice(0, 80),
+    mix: m,
+    count: raw.count == null ? null : clampInt(raw.count, 1, 200, null),
+    pause: range(raw.pause, 0, 60000, null),
+    change: range(raw.change, 0, 10000, { ...CHANGE_DEFAULT }),
+    anticipation: range(raw.anticipation, 0, 30000, null),
+  };
+  if (raw.builtIn) def.builtIn = true;
+  if (TYPES.includes(raw.legacyRemainder)) def.legacyRemainder = raw.legacyRemainder;
+  return def;
+}
+
+export function newId() {
+  return globalThis.crypto?.randomUUID?.() ??
+    `x${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+}
+
+// ---------- building an exercise ----------
+
+/** Number of signals per type, [high, low, distract, change, anticipation]. */
+export function signalCounts(def, n) {
+  const pct = TYPES.map((t) => def.mix[t] || 0);
+
+  if (def.legacyRemainder) {
+    // Android: every type gets trunc(pct * n), except one that gets
+    // n - trunc(rest * n). (Can drop a signal, e.g. program 6 with n = 12.)
+    const r = TYPES.indexOf(def.legacyRemainder);
+    return pct.map((p, i) => (i === r ? n - idiv((100 - p) * n, 100) : idiv(p * n, 100)));
   }
+
+  // Largest remainder, and every type in the mix gets at least one signal.
+  const sum = pct.reduce((a, b) => a + b, 0);
+  const exact = pct.map((p) => (p * n) / sum);
+  const counts = exact.map((x, i) => (pct[i] > 0 ? Math.max(1, Math.floor(x)) : 0));
+  let total = counts.reduce((a, b) => a + b, 0);
+  while (total < n) {
+    let best = -1;
+    for (let i = 0; i < counts.length; i++) {
+      if (pct[i] > 0 && (best < 0 || exact[i] - counts[i] > exact[best] - counts[best])) best = i;
+    }
+    counts[best]++; total++;
+  }
+  while (total > n) {
+    let best = -1;
+    for (let i = 0; i < counts.length; i++) {
+      if (counts[i] > 1 && (best < 0 || exact[i] - counts[i] < exact[best] - counts[best])) best = i;
+    }
+    if (best < 0) break; // fewer signals than types in the mix
+    counts[best]--; total--;
+  }
+  return counts;
 }
 
 function shuffle(arr) {
@@ -59,41 +159,50 @@ function shuffle(arr) {
   return arr;
 }
 
+const withNominal = (r) => ({ ...r, nominal: idiv(r.min + r.max, 2) });
+
 /**
- * Build a complete exercise for a program (1..8) and level (1..6).
- * Returns the shuffled signal list plus the timing parameters (ms).
+ * Build a runnable exercise from a definition and a level (1..6).
+ * Returns the shuffled signal list and the resolved timing ranges (ms);
+ * `nominal` is the value used for the duration estimate.
  */
-export function buildExercise(program, level) {
+export function buildExercise(def, level) {
   const lv = LEVELS[level - 1] ?? LEVELS[0];
-  const [nHigh, nLow, nDistract, nChange, nAnticipation] = programCounts(program, lv.n);
+  const counts = signalCounts(def, def.count ?? lv.n);
+  const [nHigh, nLow, nDistract, nChange, nAnticipation] = counts;
 
   const list = [];
-  for (let i = 0; i < nHigh; i++) list.push(SIGNAL.HIGH);
-  for (let i = 0; i < nLow; i++) list.push(SIGNAL.LOW);
-  for (let i = 0; i < nDistract; i++) list.push(SIGNAL.DISTRACT);
-  for (let i = 0; i < nChange; i++) list.push(SIGNAL.CHANGE);
-  for (let i = 0; i < nAnticipation; i++) list.push(SIGNAL.ANTICIPATION);
+  counts.forEach((c, type) => { for (let i = 0; i < c; i++) list.push(type); });
   shuffle(list);
-
   const count = list.length;
-  let avg = lv.avg;
-  // A change reaction takes longer, so shorten the average gap to keep the total time.
-  if (nChange !== 0) {
-    avg = idiv(count * avg - nChange * (CHOICE_MS + TONE_MS), count);
+
+  const change = withNominal(def.change ?? CHANGE_DEFAULT);
+
+  let pause;
+  if (def.pause) {
+    pause = withNominal(def.pause);
+  } else {
+    let avg = lv.avg;
+    // A change reaction takes longer, so shorten the average pause to keep the total time.
+    if (nChange !== 0) avg = idiv(count * avg - nChange * (change.nominal + TONE_MS), count);
+    pause = { min: avg - lv.sigma, max: avg + lv.sigma, nominal: avg };
   }
 
+  const anticipation = def.anticipation
+    ? withNominal(def.anticipation)
+    : { min: ANTICIPATION_BASE_MIN - lv.sigma, max: ANTICIPATION_BASE_MAX + lv.sigma, nominal: ANTICIPATION_BASE_MAX };
+
   const totalMs =
-    (nHigh + nLow + nDistract) * (TONE_MS + avg) +
-    nChange * (TONE_MS + CHOICE_MS + TONE_MS + avg) +
-    nAnticipation * (TONE_MS + TONE_MS + 3500 + avg);
+    (nHigh + nLow + nDistract) * (TONE_MS + pause.nominal) +
+    nChange * (TONE_MS + change.nominal + TONE_MS + pause.nominal) +
+    nAnticipation * (TONE_MS + TONE_MS + anticipation.nominal + pause.nominal);
 
   return {
-    program,
+    def,
     level,
     list,
-    avg,
-    sigma: lv.sigma,
     count,
+    timing: { pause, change, anticipation },
     totalSeconds: idiv(totalMs, 1000),
   };
 }

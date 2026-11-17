@@ -35,7 +35,7 @@ python3 -m http.server 8000   # then open http://localhost:8000
 
 | File | Purpose |
 |---|---|
-| `js/exercises.js` | programs, levels, exercise generation (port of the Android logic) |
+| `js/exercises.js` | exercise definition format, the 8 built-in presets, levels, exercise generation (port of the Android logic) |
 | `js/audio.js` | AudioContext, mixer buses (signals / metronome / music), tones and samples |
 | `js/scheduler.js` | lookahead scheduler on the audio clock |
 | `js/metronome.js` | metronome |
