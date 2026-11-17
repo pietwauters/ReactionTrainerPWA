@@ -39,16 +39,26 @@ change reaction you set the time between the high and the low tone.
 
 Own exercises are stored on the device (browser storage).
 
+## Drills
+
+A drill describes a real exercise: start position, what to do on each signal,
+notes and an optional video link. **Drills for this exercise** (under the
+exercise description) lists the drills that fit the current exercise; a drill
+fits every exercise that uses exactly the signals it describes (Distract is
+optional on both sides). *Show all drills* lists every drill. Tap a drill to
+read it; edit, share or delete it from there.
+
 ### Sharing and backup
 
-- **Share** (the arrow next to an own exercise) shows a QR code and a link. The
-  exercise is inside the link (`…/#ex=…`), so no server is involved. Opening
+- **Share** (the arrow next to an own exercise, or *Share* on a drill) shows a QR
+  code and a link. The item is inside the link (`…/#ex=…` or `…/#dr=…`), so no
+  server is involved. Opening
   the link offers to add the exercise; if you already have a version of it,
   you can replace yours or keep both.
 - **Add from a shared link** (in the list) takes a pasted link. On iPhone an app
   installed on the home screen has its own storage, separate from Safari, so
   a link opened in Safari doesn't reach it: copy the link and paste it here.
-- **Save backup** writes all own exercises to a `.json` file (on iPhone via the
+- **Save backup** writes all own exercises and drills to a `.json` file (on iPhone via the
   share sheet, e.g. *Save to Files*); **Restore backup** reads it back, adding
   to or replacing your own exercises.
 
@@ -69,6 +79,8 @@ python3 -m http.server 8000   # then open http://localhost:8000
 | `js/qr.js` | QR code generator (byte mode, level M) |
 | `js/transfer.js` | share-link and backup-file formats |
 | `js/sharing.js` | share dialog, adding shared exercises, backup and restore |
+| `js/drills.js` | drill format and matching drills to exercises |
+| `js/drillsui.js` | drill list, read view and editor |
 | `js/audio.js` | AudioContext, mixer buses (signals / metronome / music), tones and samples |
 | `js/scheduler.js` | lookahead scheduler on the audio clock |
 | `js/metronome.js` | metronome |

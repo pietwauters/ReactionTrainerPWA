@@ -8,7 +8,8 @@ import { Visuals } from './visuals.js';
 import { setWakeLock } from './wakelock.js';
 import { Ducker, duckingSupported } from './ducker.js';
 import { PRESETS, LEVELS, buildExercise, mixSummary } from './exercises.js';
-import { Library } from './library.js';
+import { Library, DrillLibrary } from './library.js';
+import { DrillsUI } from './drillsui.js';
 import { Picker } from './picker.js';
 import { Editor } from './editor.js';
 import { Sharing, isIOS, isStandalone } from './sharing.js';
@@ -55,6 +56,7 @@ scheduler.add(metronome); // metronome first so sync points exist before the ses
 scheduler.add(session);
 
 const library = new Library();
+const drills = new DrillLibrary();
 const currentDef = () => library.get(settings.exerciseId) ?? PRESETS[0];
 const build = () => buildExercise(currentDef(), settings.level);
 let exercise = build();
@@ -66,6 +68,8 @@ function render() {
   $('btnProgram').textContent = presetNo ? `Program ${presetNo}` : def.name;
   $('btnLevel').textContent = `Level ${settings.level}`;
   $('description').textContent = presetNo ? def.name : mixSummary(def);
+  const nDrills = drills.forExercise(def).length;
+  $('btnDrills').textContent = nDrills ? `Drills for this exercise (${nDrills})` : 'Drills for this exercise';
   $('summary').textContent = `${exercise.count} signals; ${exercise.totalSeconds} seconds`;
 
   $('btnStart').textContent = session.active ? 'Stop' : 'Start';
@@ -160,7 +164,13 @@ const editor = new Editor({
 
 const sharing = new Sharing({
   library,
+  drills,
   getLevel: () => settings.level,
+  onDrillAdded: (drill) => {
+    render();
+    if ($('drillsDialog').open) drillsUI.renderList();
+    drillsUI.view(drill);
+  },
   onAdded: (def) => {
     picker.render(settings.exerciseId);
     if (!session.active) selectExercise(def);
@@ -168,8 +178,20 @@ const sharing = new Sharing({
   onChanged: () => {
     if (!library.get(settings.exerciseId)) selectExercise(PRESETS[0]);
     picker.render(settings.exerciseId);
+    render();
   },
 });
+
+const drillsUI = new DrillsUI({
+  drills,
+  library,
+  getExercise: currentDef,
+  onShare: (drill) => sharing.shareDrill(drill),
+  onChanged: render,
+});
+$('btnDrills').addEventListener('click', () => drillsUI.open());
+closeOnTapOutside($('drillsDialog'));
+closeOnTapOutside($('drillView'));
 
 const picker = new Picker(library, {
   onSelect: selectExercise,

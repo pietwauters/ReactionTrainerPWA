@@ -212,6 +212,23 @@ button.danger { background: transparent; color: var(--stop); }
 #pasteDialog input { margin-top: 12px; }
 #btnProgram { -webkit-touch-callout: none; }
 
+/* ---- drills ---- */
+#btnDrills { margin-top: 2px; font-size: 0.95rem; }
+textarea {
+  font: inherit; color: var(--ink); background: var(--surface);
+  width: 100%; padding: 8px 12px; resize: vertical;
+  border: 1px solid var(--line); border-radius: 10px;
+  -webkit-user-select: text; user-select: text;
+}
+textarea:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
+.responses { display: flex; flex-direction: column; gap: 10px; }
+.responses label { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; }
+.drill-body { -webkit-user-select: text; user-select: text; }
+#drillView:focus { outline: none; }
+.drill-body h3 { margin: 16px 0 4px; font-size: 0.9rem; color: var(--muted); }
+.drill-body p { margin: 0; white-space: pre-line; }
+.drill-body a { color: var(--primary); word-break: break-all; }
+
 /* ---- install hint ---- */
 .install-hint {
   position: fixed;

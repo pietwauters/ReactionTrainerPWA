@@ -43,6 +43,7 @@
     <section class="exercise" aria-live="polite">
       <p id="summary" class="summary">10 signals; 60 seconds</p>
       <p id="description" class="description">Only High tones</p>
+      <button id="btnDrills" class="link">Drills for this exercise</button>
     </section>
 
     <section class="options">
@@ -84,7 +85,7 @@
       <button id="btnPasteLink" class="secondary">Add from a shared link</button>
     </div>
     <h3 class="list-head">Backup</h3>
-    <p class="note">Your own exercises are stored only on this device. Save a backup file to keep them safe or move them to another phone.</p>
+    <p class="note">Your own exercises and drills are stored only on this device. Save a backup file to keep them safe or move them to another phone.</p>
     <div class="row-buttons">
       <button id="btnBackup" class="secondary">Save backup</button>
       <button id="btnRestore" class="secondary">Restore backup</button>
@@ -160,11 +161,54 @@
     </div>
   </dialog>
 
+  <dialog id="drillsDialog" class="sheet" aria-labelledby="drillsTitle">
+    <h2 id="drillsTitle">Drills</h2>
+    <p id="drillsFor" class="note"></p>
+    <label class="switch"><input type="checkbox" id="swAllDrills"><span>Show all drills</span></label>
+    <ul id="drillList" class="ex-list"></ul>
+    <p id="drillsEmpty" class="note"></p>
+    <div class="dialog-actions">
+      <button id="btnNewDrill">New drill</button>
+      <button id="btnDrillPaste" class="secondary">Add from a shared link</button>
+      <button id="btnDrillsClose" class="secondary">Close</button>
+    </div>
+  </dialog>
+
+  <dialog id="drillView" class="sheet" aria-labelledby="dvName" tabindex="-1">
+    <h2 id="dvName"></h2>
+    <p id="dvTypes" class="note"></p>
+    <div id="dvBody" class="drill-body"></div>
+    <div class="dialog-actions">
+      <button id="dvEdit">Edit</button>
+      <button id="dvShare" class="secondary">Share</button>
+      <button id="dvClose" class="secondary">Close</button>
+    </div>
+  </dialog>
+
+  <dialog id="drillEditor" class="sheet" aria-labelledby="deTitle">
+    <h2 id="deTitle">New drill</h2>
+    <label class="field"><span>Name</span><input id="deName" type="text" maxlength="80" autocomplete="off"></label>
+    <label class="field"><span>Start position</span><textarea id="deStart" rows="2" maxlength="1000"></textarea></label>
+    <div class="field">
+      <span>What to do on each signal</span>
+      <p class="note">Fill in only the signals this drill uses. The drill then shows up for every exercise with exactly these signals (Distract is optional).</p>
+      <div id="deResponses" class="responses"></div>
+    </div>
+    <label class="field"><span>Notes</span><textarea id="deNotes" rows="3" maxlength="2000"></textarea></label>
+    <label class="field"><span>Video link (optional)</span><input id="deVideo" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://…"></label>
+    <p id="dePreview" class="preview" aria-live="polite"></p>
+    <div class="dialog-actions">
+      <button id="deSave">Save</button>
+      <button id="deCancel" class="secondary">Cancel</button>
+      <button id="deDelete" class="danger">Delete</button>
+    </div>
+  </dialog>
+
   <dialog id="pasteDialog" aria-labelledby="pasteTitle">
-    <h2 id="pasteTitle">Add a shared exercise</h2>
+    <h2 id="pasteTitle">Add from a shared link</h2>
     <p class="note">Paste the link you received.</p>
     <input id="pasteInput" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://…#ex=…">
-    <p id="pasteError" class="note error" hidden>No exercise found in this text.</p>
+    <p id="pasteError" class="note error" hidden>No exercise or drill found in this text.</p>
     <div class="dialog-actions">
       <button id="btnPasteOk">Continue</button>
       <button id="btnPasteCancel" class="secondary">Cancel</button>
