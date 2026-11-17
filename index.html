@@ -71,6 +71,72 @@
     </section>
   </main>
 
+  <dialog id="pickerDialog" class="sheet" aria-labelledby="pickerTitle">
+    <h2 id="pickerTitle">Choose an exercise</h2>
+    <h3 class="list-head">Built-in programs</h3>
+    <ul id="presetList" class="ex-list"></ul>
+    <h3 class="list-head">My exercises</h3>
+    <ul id="customList" class="ex-list"></ul>
+    <p id="customEmpty" class="note">None yet. Create a new one, or open a built-in program with ✎ and make a copy.</p>
+    <div class="dialog-actions">
+      <button id="btnNewExercise">New exercise</button>
+      <button id="btnPickerClose" class="secondary">Close</button>
+    </div>
+  </dialog>
+
+  <dialog id="editorDialog" class="sheet" aria-labelledby="editorTitle">
+    <h2 id="editorTitle">Edit exercise</h2>
+    <p id="edReadOnly" class="note" hidden>Built-in programs can't be changed. Make a copy to adjust one.</p>
+    <fieldset id="edFields">
+      <h3>General</h3>
+      <label class="field"><span>Name</span><input id="edName" type="text" maxlength="80" autocomplete="off"></label>
+
+      <div class="field">
+        <span>Signal mix</span>
+        <div id="edMix" class="mix"></div>
+        <p id="edMixTotal" class="note"></p>
+      </div>
+
+      <label class="switch"><input type="checkbox" id="edCountLevel"><span>Number of signals: follow level <span id="edCountHint" class="hint"></span></span></label>
+      <div id="edCountBox" class="range">
+        <input id="edCount" type="text" inputmode="numeric" aria-label="Number of signals"><span>signals</span>
+      </div>
+
+      <label class="switch"><input type="checkbox" id="edPauseLevel"><span>Pause between signals: follow level <span id="edPauseHint" class="hint"></span></span></label>
+      <div id="edPauseBox" class="range">
+        <input id="edPauseMin" type="text" inputmode="decimal" aria-label="Shortest pause in seconds"><span>to</span>
+        <input id="edPauseMax" type="text" inputmode="decimal" aria-label="Longest pause in seconds"><span>seconds</span>
+      </div>
+      <p class="note">A pause is the time from the end of a signal to the start of the next one.</p>
+
+      <section id="edStage2">
+        <h3>Signal details</h3>
+        <div id="edChangeBox">
+          <p class="field-title">Change reaction: time between the end of the high tone and the low tone</p>
+          <div class="range">
+            <input id="edChangeMin" type="text" inputmode="decimal" aria-label="Shortest change delay in seconds"><span>to</span>
+            <input id="edChangeMax" type="text" inputmode="decimal" aria-label="Longest change delay in seconds"><span>seconds</span>
+          </div>
+        </div>
+        <div id="edAntBox">
+          <label class="switch"><input type="checkbox" id="edAntLevel"><span>Anticipation: time between the end of the high tone and the low tone: follow level <span id="edAntHint" class="hint"></span></span></label>
+          <div id="edAntRange" class="range">
+            <input id="edAntMin" type="text" inputmode="decimal" aria-label="Shortest anticipation wait in seconds"><span>to</span>
+            <input id="edAntMax" type="text" inputmode="decimal" aria-label="Longest anticipation wait in seconds"><span>seconds</span>
+          </div>
+        </div>
+      </section>
+    </fieldset>
+
+    <p id="edPreview" class="preview" aria-live="polite"></p>
+    <div class="dialog-actions">
+      <button id="edSave">Save</button>
+      <button id="edCopy" class="secondary">Make a copy</button>
+      <button id="edCancel" class="secondary">Cancel</button>
+      <button id="edDelete" class="danger">Delete</button>
+    </div>
+  </dialog>
+
   <dialog id="shareDialog" aria-labelledby="shareTitle">
     <h2 id="shareTitle">Share Reaction Trainer</h2>
     <p class="note">Scan with a phone camera to open the app.</p>

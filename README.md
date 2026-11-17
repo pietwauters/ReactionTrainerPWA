@@ -25,6 +25,19 @@ when the screen locks).
 
 Programs set the mix of signals, levels set the number of signals and the gaps.
 
+## Own exercises
+
+Tap the **Program** button to open the exercise list. Next to each exercise, ✎
+opens it: built-in programs can be viewed and copied, own exercises can be
+edited and deleted. **New exercise** starts from scratch.
+
+An exercise has a name and a signal mix in percent (adding up to 100). The
+number of signals, the pause between signals and the anticipation wait follow
+the selected level unless you switch that off and enter your own values. For a
+change reaction you set the time between the high and the low tone.
+
+Own exercises are stored on the device (browser storage).
+
 ## Develop
 
 No build step: plain HTML, CSS and ES modules.
@@ -36,6 +49,9 @@ python3 -m http.server 8000   # then open http://localhost:8000
 | File | Purpose |
 |---|---|
 | `js/exercises.js` | exercise definition format, the 8 built-in presets, levels, exercise generation (port of the Android logic) |
+| `js/library.js` | built-in presets plus own exercises, stored in localStorage |
+| `js/picker.js` | exercise list dialog |
+| `js/editor.js` | exercise editor dialog |
 | `js/audio.js` | AudioContext, mixer buses (signals / metronome / music), tones and samples |
 | `js/scheduler.js` | lookahead scheduler on the audio clock |
 | `js/metronome.js` | metronome |

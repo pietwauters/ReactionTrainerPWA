@@ -30,6 +30,11 @@ export const SIGNAL = Object.freeze({
 /** Signal type keys, indexed by SIGNAL value. */
 export const TYPES = Object.freeze(['high', 'low', 'distract', 'change', 'anticipation']);
 
+/** Names shown in the app, by type key. */
+export const TYPE_LABELS = Object.freeze({
+  high: 'High', low: 'Low', distract: 'Distract', change: 'Change reaction', anticipation: 'Anticipation',
+});
+
 export const FORMAT_VERSION = 1;
 
 export const TONE_MS = 300;    // duration of each signal tone
@@ -122,10 +127,13 @@ export function signalCounts(def, n) {
   const pct = TYPES.map((t) => def.mix[t] || 0);
 
   if (def.legacyRemainder) {
-    // Android: every type gets trunc(pct * n), except one that gets
-    // n - trunc(rest * n). (Can drop a signal, e.g. program 6 with n = 12.)
+    // Android: every type gets trunc(pct * n) and one type gets the rest.
+    // (The Android app computed the rest as n - trunc(rest% * n), which lost
+    // a signal in programs 4 and 6 at levels 2 and 5; fixed here.)
     const r = TYPES.indexOf(def.legacyRemainder);
-    return pct.map((p, i) => (i === r ? n - idiv((100 - p) * n, 100) : idiv(p * n, 100)));
+    const counts = pct.map((p, i) => (i === r ? 0 : idiv(p * n, 100)));
+    counts[r] = n - counts.reduce((a, b) => a + b, 0);
+    return counts;
   }
 
   // Largest remainder, and every type in the mix gets at least one signal.
@@ -157,6 +165,21 @@ function shuffle(arr) {
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
+}
+
+/** What "follow the level" means for a level (1..6): count and ranges in ms. */
+export function levelDefaults(level) {
+  const lv = LEVELS[level - 1] ?? LEVELS[0];
+  return {
+    count: lv.n,
+    pause: { min: lv.avg - lv.sigma, max: lv.avg + lv.sigma },
+    anticipation: { min: ANTICIPATION_BASE_MIN - lv.sigma, max: ANTICIPATION_BASE_MAX + lv.sigma },
+  };
+}
+
+/** Short description of the mix, e.g. "High 40% · Low 40% · Distract 20%". */
+export function mixSummary(def) {
+  return TYPES.filter((t) => def.mix[t] > 0).map((t) => `${TYPE_LABELS[t]} ${def.mix[t]}%`).join(' · ');
 }
 
 const withNominal = (r) => ({ ...r, nominal: idiv(r.min + r.max, 2) });

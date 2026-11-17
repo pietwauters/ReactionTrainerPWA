@@ -1,6 +1,6 @@
 // Service worker: caches the whole app so it works offline.
 // Bump VERSION whenever any file changes, so phones pick up the new version.
-const VERSION = 'v7';
+const VERSION = 'v8';
 const CACHE = `reactiontrainer-${VERSION}`;
 
 const FILES = [
@@ -12,6 +12,9 @@ const FILES = [
   'js/audio.js',
   'js/ducker.js',
   'js/exercises.js',
+  'js/library.js',
+  'js/picker.js',
+  'js/editor.js',
   'js/metronome.js',
   'js/scheduler.js',
   'js/session.js',
@@ -30,7 +33,10 @@ const FILES = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
+  // cache: 'reload' bypasses the browser's HTTP cache, so a new version never
+  // mixes in files that are still cached from the previous one.
+  const requests = FILES.map((f) => new Request(f, { cache: 'reload' }));
+  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(requests)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {

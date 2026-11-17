@@ -7,14 +7,17 @@ import { Session } from './session.js';
 import { Visuals } from './visuals.js';
 import { setWakeLock } from './wakelock.js';
 import { Ducker, duckingSupported } from './ducker.js';
-import { PRESETS, LEVELS, buildExercise } from './exercises.js';
+import { PRESETS, LEVELS, buildExercise, mixSummary } from './exercises.js';
+import { Library } from './library.js';
+import { Picker } from './picker.js';
+import { Editor } from './editor.js';
 
 const $ = (id) => document.getElementById(id);
 
 // ---------- settings (per-device convenience only) ----------
 const STORE_KEY = 'reactiontrainer.settings.v1';
 const defaults = {
-  program: 1, level: 1, base: 20, noteValue: 4, beatsPerBar: 2,
+  exerciseId: 'preset-1', level: 1, base: 20, noteValue: 4, beatsPerBar: 2,
   changeTempo: false, sync: false, mix: false, btKeepAlive: false, duck: false, hintDismissed: false,
 };
 
@@ -22,7 +25,12 @@ const defaults = {
 // Bluetooth devices awake by itself, so the keep-alive noise is not needed.
 let musicPlaying = false;
 let settings = { ...defaults };
-try { Object.assign(settings, JSON.parse(localStorage.getItem(STORE_KEY) || '{}')); } catch { /* ignore */ }
+try {
+  const stored = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
+  if (stored.program && !stored.exerciseId) stored.exerciseId = `preset-${stored.program}`; // before custom exercises
+  delete stored.program;
+  Object.assign(settings, stored);
+} catch { /* ignore */ }
 function save() {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(settings)); } catch { /* ignore */ }
 }
@@ -45,15 +53,18 @@ metronome.onSubTickMidpoint = (t) => session.syncPoint(t);
 scheduler.add(metronome); // metronome first so sync points exist before the session looks
 scheduler.add(session);
 
-const currentDef = () => PRESETS[settings.program - 1] ?? PRESETS[0];
+const library = new Library();
+const currentDef = () => library.get(settings.exerciseId) ?? PRESETS[0];
 const build = () => buildExercise(currentDef(), settings.level);
 let exercise = build();
 
 // ---------- rendering ----------
 function render() {
-  $('btnProgram').textContent = `Program ${settings.program}`;
+  const def = currentDef();
+  const presetNo = PRESETS.indexOf(def) + 1;
+  $('btnProgram').textContent = presetNo ? `Program ${presetNo}` : def.name;
   $('btnLevel').textContent = `Level ${settings.level}`;
-  $('description').textContent = currentDef().name;
+  $('description').textContent = presetNo ? def.name : mixSummary(def);
   $('summary').textContent = `${exercise.count} signals; ${exercise.totalSeconds} seconds`;
 
   $('btnStart').textContent = session.active ? 'Stop' : 'Start';
@@ -121,11 +132,39 @@ $('btnMetronome').addEventListener('click', async () => {
   refreshRunning();
 });
 
-$('btnProgram').addEventListener('click', () => {
-  settings.program = settings.program % PRESETS.length + 1;
+// ---------- exercise list and editor ----------
+function selectExercise(def) {
+  settings.exerciseId = def.id;
   exercise = build();
   save(); render();
+}
+
+const editor = new Editor({
+  getLevel: () => settings.level,
+  onSave: (def) => {
+    const saved = library.save(def);
+    picker.close();
+    selectExercise(saved);
+  },
+  onCopy: (def) => editor.open(library.copyOf(def), 'new', 'New exercise'),
+  onDelete: (def) => {
+    library.remove(def.id);
+    if (settings.exerciseId === def.id) selectExercise(PRESETS[0]);
+    picker.render(settings.exerciseId);
+  },
 });
+
+const picker = new Picker(library, {
+  onSelect: selectExercise,
+  onEdit: (def) => {
+    const n = PRESETS.indexOf(def) + 1;
+    if (n) editor.open(def, 'preset', `Program ${n}`);
+    else editor.open(def, 'edit', 'Edit exercise');
+  },
+  onNew: () => editor.open(library.blank(), 'new', 'New exercise'),
+});
+
+$('btnProgram').addEventListener('click', () => picker.open(settings.exerciseId));
 
 $('btnLevel').addEventListener('click', () => {
   settings.level = settings.level % LEVELS.length + 1;
@@ -157,6 +196,17 @@ $('swDuck').addEventListener('change', (e) => {
 });
 if (!duckingSupported) $('duckSetting').hidden = true;
 
+/** Close a dialog when the backdrop (outside the dialog box) is tapped. */
+function closeOnTapOutside(dialog) {
+  dialog.addEventListener('click', (e) => {
+    if (e.target !== dialog) return; // a tap on something inside it
+    const r = dialog.getBoundingClientRect();
+    const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+    if (!inside) dialog.close();
+  });
+}
+closeOnTapOutside($('pickerDialog'));
+
 // ---------- iOS "Add to Home Screen" hint ----------
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -178,11 +228,7 @@ if (navigator.share && (!navigator.canShare || navigator.canShare(shareData))) $
 
 $('btnShare').addEventListener('click', () => $('shareDialog').showModal());
 $('btnShareClose').addEventListener('click', () => $('shareDialog').close());
-$('shareDialog').addEventListener('click', (e) => { // tap outside the dialog closes it
-  const r = e.currentTarget.getBoundingClientRect();
-  const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
-  if (!inside) e.currentTarget.close();
-});
+closeOnTapOutside($('shareDialog'));
 $('btnShareLink').addEventListener('click', () => {
   navigator.share(shareData).catch(() => { /* cancelled */ });
 });
