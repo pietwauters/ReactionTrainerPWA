@@ -144,7 +144,8 @@ dialog {
 }
 dialog::backdrop { background: rgba(10, 20, 35, .55); }
 dialog h2 { margin: 0 0 4px; font-size: 1.2rem; }
-.qr { display: block; width: 240px; max-width: 100%; height: auto; margin: 16px auto 8px; }
+.qr { display: block; width: 240px; max-width: 100%; aspect-ratio: 1; margin: 16px auto 8px; }
+.qr svg { display: block; width: 100%; height: 100%; }
 .share-url { font-size: 0.8rem; color: var(--muted); word-break: break-all; margin: 0 0 16px; user-select: text; -webkit-user-select: text; }
 .dialog-actions { display: flex; flex-direction: column; gap: 10px; }
 
@@ -201,6 +202,15 @@ input:disabled { color: var(--muted); background: #f3f5f8; }
 .error { color: var(--stop); }
 .preview.error { background: #fbeceb; }
 button.danger { background: transparent; color: var(--stop); }
+
+.note.center { text-align: center; margin-top: -6px; }
+.row-buttons { display: flex; gap: 8px; }
+.row-buttons button { flex: 1; padding: 0 8px; }
+.ex-share { flex: none; width: 52px; padding: 0; border-radius: 12px; background: var(--line); color: var(--ink); display: grid; place-items: center; }
+.ex-share svg { width: 22px; height: 22px; }
+.msg-text { white-space: pre-line; margin: 8px 0; }
+#pasteDialog input { margin-top: 12px; }
+#btnProgram { -webkit-touch-callout: none; }
 
 /* ---- install hint ---- */
 .install-hint {

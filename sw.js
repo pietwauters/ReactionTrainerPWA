@@ -1,6 +1,6 @@
 // Service worker: caches the whole app so it works offline.
 // Bump VERSION whenever any file changes, so phones pick up the new version.
-const VERSION = 'v8';
+const VERSION = 'v9';
 const CACHE = `reactiontrainer-${VERSION}`;
 
 const FILES = [
@@ -15,6 +15,9 @@ const FILES = [
   'js/library.js',
   'js/picker.js',
   'js/editor.js',
+  'js/qr.js',
+  'js/transfer.js',
+  'js/sharing.js',
   'js/metronome.js',
   'js/scheduler.js',
   'js/session.js',
@@ -29,7 +32,6 @@ const FILES = [
   'icons/maskable-512.png',
   'icons/apple-touch-icon.png',
   'icons/favicon-32.png',
-  'icons/share-qr.svg',
 ];
 
 self.addEventListener('install', (event) => {

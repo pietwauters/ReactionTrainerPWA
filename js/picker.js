@@ -1,22 +1,26 @@
 // The exercise list (a dialog): built-in programs and own exercises.
-// Tap a row to choose it; ✎ opens it in the editor.
+// Tap a row to choose it; ✎ opens it in the editor; own exercises can be shared.
 
 import { mixSummary } from './exercises.js';
 
 const $ = (id) => document.getElementById(id);
+const SHARE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>';
 
 export class Picker {
   /**
    * @param library  Library
    * @param onSelect (def) => void
    * @param onEdit   (def) => void
+   * @param onShare  (def) => void
    * @param onNew    () => void
    */
-  constructor(library, { onSelect, onEdit, onNew }) {
+  constructor(library, { onSelect, onEdit, onShare, onNew }) {
     this.library = library;
     this.dialog = $('pickerDialog');
     this.onSelect = onSelect;
     this.onEdit = onEdit;
+    this.onShare = onShare;
     $('btnNewExercise').addEventListener('click', onNew);
     $('btnPickerClose').addEventListener('click', () => this.dialog.close());
   }
@@ -60,7 +64,16 @@ export class Picker {
     edit.setAttribute('aria-label', `${def.builtIn ? 'View' : 'Edit'} ${title}`);
     edit.addEventListener('click', () => this.onEdit(def));
 
-    li.append(pick, edit);
+    li.append(pick);
+    if (!def.builtIn) {
+      const share = document.createElement('button');
+      share.className = 'ex-share';
+      share.innerHTML = SHARE_ICON;
+      share.setAttribute('aria-label', `Share ${title}`);
+      share.addEventListener('click', () => this.onShare(def));
+      li.append(share);
+    }
+    li.append(edit);
     return li;
   }
 }

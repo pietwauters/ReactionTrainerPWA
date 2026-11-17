@@ -11,6 +11,7 @@ import { PRESETS, LEVELS, buildExercise, mixSummary } from './exercises.js';
 import { Library } from './library.js';
 import { Picker } from './picker.js';
 import { Editor } from './editor.js';
+import { Sharing, isIOS, isStandalone } from './sharing.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -103,6 +104,7 @@ function refreshRunning() {
   refreshKeepAlive();
   refreshDucking();
   render();
+sharing.handleIncomingLink();
 }
 
 metronome.onChange = () => {
@@ -111,6 +113,7 @@ metronome.onChange = () => {
   settings.beatsPerBar = metronome.beatsPerBar;
   save();
   render();
+sharing.handleIncomingLink();
 };
 session.onEnd = refreshRunning;
 
@@ -137,6 +140,7 @@ function selectExercise(def) {
   settings.exerciseId = def.id;
   exercise = build();
   save(); render();
+sharing.handleIncomingLink();
 }
 
 const editor = new Editor({
@@ -154,8 +158,22 @@ const editor = new Editor({
   },
 });
 
+const sharing = new Sharing({
+  library,
+  getLevel: () => settings.level,
+  onAdded: (def) => {
+    picker.render(settings.exerciseId);
+    if (!session.active) selectExercise(def);
+  },
+  onChanged: () => {
+    if (!library.get(settings.exerciseId)) selectExercise(PRESETS[0]);
+    picker.render(settings.exerciseId);
+  },
+});
+
 const picker = new Picker(library, {
   onSelect: selectExercise,
+  onShare: (def) => sharing.shareExercise(def),
   onEdit: (def) => {
     const n = PRESETS.indexOf(def) + 1;
     if (n) editor.open(def, 'preset', `Program ${n}`);
@@ -164,12 +182,46 @@ const picker = new Picker(library, {
   onNew: () => editor.open(library.blank(), 'new', 'New exercise'),
 });
 
-$('btnProgram').addEventListener('click', () => picker.open(settings.exerciseId));
+// Program: a tap steps through the built-in programs, a long press opens the full list.
+onTapOrHold($('btnProgram'), {
+  tap: () => {
+    const n = PRESETS.indexOf(currentDef()) + 1; // 0 for an own exercise
+    selectExercise(PRESETS[n % PRESETS.length]);
+  },
+  hold: () => picker.open(settings.exerciseId),
+});
+
+/** Separate a tap from a long press (also right-click / context-menu key for the long press). */
+function onTapOrHold(el, { tap, hold, ms = 500 }) {
+  let timer = 0, held = false, x0 = 0, y0 = 0;
+  const cancel = () => { clearTimeout(timer); timer = 0; };
+  el.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || el.disabled) return;
+    held = false; x0 = e.clientX; y0 = e.clientY;
+    cancel();
+    timer = setTimeout(() => { timer = 0; held = true; navigator.vibrate?.(15); hold(); }, ms);
+  });
+  el.addEventListener('pointermove', (e) => { if (Math.hypot(e.clientX - x0, e.clientY - y0) > 10) cancel(); });
+  for (const type of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(type, cancel);
+  el.addEventListener('click', () => {
+    if (held) { held = false; return; } // the end of a long press
+    tap();
+  });
+  el.addEventListener('contextmenu', (e) => {
+    e.preventDefault(); // no browser menu on a long press
+    if (held || el.disabled) return;
+    cancel();
+    held = true; // swallow a click that may follow right after
+    setTimeout(() => { held = false; }, 800);
+    hold();
+  });
+}
 
 $('btnLevel').addEventListener('click', () => {
   settings.level = settings.level % LEVELS.length + 1;
   exercise = build();
   save(); render();
+sharing.handleIncomingLink();
 });
 
 $('btnUpper').addEventListener('click', () => metronome.cycleBeatsPerBar());
@@ -208,10 +260,7 @@ function closeOnTapOutside(dialog) {
 closeOnTapOutside($('pickerDialog'));
 
 // ---------- iOS "Add to Home Screen" hint ----------
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-if (isIOS && !standalone && !settings.hintDismissed) {
+if (isIOS && !isStandalone && !settings.hintDismissed) {
   $('installHint').hidden = false;
   $('btnHintClose').addEventListener('click', () => {
     $('installHint').hidden = true;
@@ -220,28 +269,11 @@ if (isIOS && !standalone && !settings.hintDismissed) {
   });
 }
 
-// ---------- share ----------
-const APP_URL = 'https://pietwauters.github.io/ReactionTrainerPWA/'; // the QR code in icons/share-qr.svg encodes this
-const shareData = { title: 'Reaction Trainer', text: 'Reaction trainer with metronome', url: APP_URL };
-$('shareUrl').textContent = APP_URL;
-if (navigator.share && (!navigator.canShare || navigator.canShare(shareData))) $('btnShareLink').hidden = false;
-
-$('btnShare').addEventListener('click', () => $('shareDialog').showModal());
-$('btnShareClose').addEventListener('click', () => $('shareDialog').close());
+// ---------- sharing and backup ----------
+$('btnShare').addEventListener('click', () => sharing.shareApp());
 closeOnTapOutside($('shareDialog'));
-$('btnShareLink').addEventListener('click', () => {
-  navigator.share(shareData).catch(() => { /* cancelled */ });
-});
-$('btnCopyLink').addEventListener('click', async () => {
-  const btn = $('btnCopyLink');
-  try {
-    await navigator.clipboard.writeText(APP_URL);
-    btn.textContent = 'Copied!';
-  } catch {
-    btn.textContent = 'Copy failed';
-  }
-  setTimeout(() => { btn.textContent = 'Copy link'; }, 1500);
-});
+closeOnTapOutside($('pasteDialog'));
+window.addEventListener('hashchange', () => sharing.handleIncomingLink());
 
 // ---------- offline support ----------
 if ('serviceWorker' in navigator) {
@@ -251,3 +283,4 @@ if ('serviceWorker' in navigator) {
 }
 
 render();
+sharing.handleIncomingLink();

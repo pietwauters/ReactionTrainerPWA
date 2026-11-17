@@ -33,7 +33,16 @@ export class Library {
     const i = this.custom.findIndex((x) => x.id === d.id);
     if (i >= 0) this.custom[i] = d; else this.custom.push(d);
     this.#persist();
+    // ask the browser not to clear our storage when space runs low (best effort)
+    navigator.storage?.persist?.().catch(() => {});
     return d;
+  }
+
+  /** Replace all own exercises (restoring a backup). */
+  replaceAll(defs) {
+    this.custom = [];
+    for (const d of defs) this.save(d);
+    this.#persist();
   }
 
   remove(id) {

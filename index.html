@@ -66,6 +66,7 @@
         <button id="btnProgram">Program 1</button>
         <button id="btnLevel">Level 1</button>
       </div>
+      <p class="note center">Hold <strong>Program</strong> for all exercises, including your own.</p>
       <button id="btnStart" class="start">Start</button>
       <button id="btnShare" class="link">Share this app</button>
     </section>
@@ -80,6 +81,16 @@
     <p id="customEmpty" class="note">None yet. Create a new one, or open a built-in program with ✎ and make a copy.</p>
     <div class="dialog-actions">
       <button id="btnNewExercise">New exercise</button>
+      <button id="btnPasteLink" class="secondary">Add from a shared link</button>
+    </div>
+    <h3 class="list-head">Backup</h3>
+    <p class="note">Your own exercises are stored only on this device. Save a backup file to keep them safe or move them to another phone.</p>
+    <div class="row-buttons">
+      <button id="btnBackup" class="secondary">Save backup</button>
+      <button id="btnRestore" class="secondary">Restore backup</button>
+    </div>
+    <input id="restoreFile" type="file" accept="application/json,.json" hidden>
+    <div class="dialog-actions">
       <button id="btnPickerClose" class="secondary">Close</button>
     </div>
   </dialog>
@@ -139,14 +150,32 @@
 
   <dialog id="shareDialog" aria-labelledby="shareTitle">
     <h2 id="shareTitle">Share Reaction Trainer</h2>
-    <p class="note">Scan with a phone camera to open the app.</p>
-    <img src="icons/share-qr.svg" alt="QR code for the Reaction Trainer web address" class="qr" width="240" height="240">
+    <p id="shareNote" class="note">Scan with a phone camera to open the app.</p>
+    <div id="shareQr" class="qr" role="img" aria-label="QR code"></div>
     <p id="shareUrl" class="share-url"></p>
     <div class="dialog-actions">
       <button id="btnShareLink" hidden>Share link…</button>
       <button id="btnCopyLink">Copy link</button>
       <button id="btnShareClose" class="secondary">Close</button>
     </div>
+  </dialog>
+
+  <dialog id="pasteDialog" aria-labelledby="pasteTitle">
+    <h2 id="pasteTitle">Add a shared exercise</h2>
+    <p class="note">Paste the link you received.</p>
+    <input id="pasteInput" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://…#ex=…">
+    <p id="pasteError" class="note error" hidden>No exercise found in this text.</p>
+    <div class="dialog-actions">
+      <button id="btnPasteOk">Continue</button>
+      <button id="btnPasteCancel" class="secondary">Cancel</button>
+    </div>
+  </dialog>
+
+  <dialog id="msgDialog" aria-labelledby="msgTitle">
+    <h2 id="msgTitle"></h2>
+    <p id="msgText" class="msg-text"></p>
+    <p id="msgNote" class="note" hidden></p>
+    <div id="msgActions" class="dialog-actions"></div>
   </dialog>
 
   <div id="installHint" class="install-hint" hidden>

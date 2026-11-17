@@ -27,9 +27,10 @@ Programs set the mix of signals, levels set the number of signals and the gaps.
 
 ## Own exercises
 
-Tap the **Program** button to open the exercise list. Next to each exercise, ✎
-opens it: built-in programs can be viewed and copied, own exercises can be
-edited and deleted. **New exercise** starts from scratch.
+Tapping **Program** steps through the built-in programs; **holding** it opens
+the exercise list. Next to each exercise, ✎ opens it: built-in programs can be
+viewed and copied, own exercises can be edited and deleted. **New exercise**
+starts from scratch.
 
 An exercise has a name and a signal mix in percent (adding up to 100). The
 number of signals, the pause between signals and the anticipation wait follow
@@ -37,6 +38,19 @@ the selected level unless you switch that off and enter your own values. For a
 change reaction you set the time between the high and the low tone.
 
 Own exercises are stored on the device (browser storage).
+
+### Sharing and backup
+
+- **Share** (the arrow next to an own exercise) shows a QR code and a link. The
+  exercise is inside the link (`…/#ex=…`), so no server is involved. Opening
+  the link offers to add the exercise; if you already have a version of it,
+  you can replace yours or keep both.
+- **Add from a shared link** (in the list) takes a pasted link. On iPhone an app
+  installed on the home screen has its own storage, separate from Safari, so
+  a link opened in Safari doesn't reach it: copy the link and paste it here.
+- **Save backup** writes all own exercises to a `.json` file (on iPhone via the
+  share sheet, e.g. *Save to Files*); **Restore backup** reads it back, adding
+  to or replacing your own exercises.
 
 ## Develop
 
@@ -52,6 +66,9 @@ python3 -m http.server 8000   # then open http://localhost:8000
 | `js/library.js` | built-in presets plus own exercises, stored in localStorage |
 | `js/picker.js` | exercise list dialog |
 | `js/editor.js` | exercise editor dialog |
+| `js/qr.js` | QR code generator (byte mode, level M) |
+| `js/transfer.js` | share-link and backup-file formats |
+| `js/sharing.js` | share dialog, adding shared exercises, backup and restore |
 | `js/audio.js` | AudioContext, mixer buses (signals / metronome / music), tones and samples |
 | `js/scheduler.js` | lookahead scheduler on the audio clock |
 | `js/metronome.js` | metronome |
